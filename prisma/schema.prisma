@@ -1,0 +1,173 @@
+// Controle de dívida — modelo de dados.
+// Decisões em docs/ADR-0001-calculo-e-arquitetura.md
+//
+// Regra central: TODO valor monetário é guardado em centavos (Int), nunca
+// em ponto flutuante, e todo cálculo acontece no servidor.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DebtRole {
+  DEBTOR // devedor (paga)
+  CREDITOR // credor (recebe e confirma)
+}
+
+enum DebtPaymentMethod {
+  PIX
+  BANK_TRANSFER
+  CASH
+  OTHER
+}
+
+enum DebtPaymentStatus {
+  PENDING // aguardando confirmação do credor
+  CONFIRMED // confirmado pelo credor
+  DISPUTED // contestado
+  CANCELED // cancelado (não entra em nenhum total)
+}
+
+enum DebtInterestMode {
+  COMPOUND // juros sobre juros (capitalização mensal)
+  SIMPLE // juros só sobre o principal em aberto
+  NONE // sem juros
+}
+
+model DebtUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         DebtRole
+  isActive     Boolean  @default(true)
+
+  // Permissões ajustáveis na tela de configurações, sem mexer em código.
+  canRegisterPayments Boolean @default(false)
+  canConfirmPayments  Boolean @default(false)
+  canEditPayments     Boolean @default(false)
+  canDeletePayments   Boolean @default(false)
+  canManageSettings   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions           DebtSession[]
+  resetTokens        DebtPasswordResetToken[]
+  registeredPayments DebtPayment[]            @relation("DebtPaymentRegisteredBy")
+  confirmedPayments  DebtPayment[]            @relation("DebtPaymentConfirmedBy")
+  auditLogs          DebtAuditLog[]
+}
+
+model DebtSession {
+  id        String   @id // hash sha256 do token do cookie
+  userId    String
+  expiresAt DateTime
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user DebtUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model DebtPasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user DebtUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Debt {
+  id             String   @id @default(cuid())
+  debtorName     String
+  creditorName   String
+  principalCents Int // valor original da dívida, em centavos
+  currency       String   @default("BRL")
+  description    String?
+
+  // Juros: a data do contrato define o "dia de aniversário" do reajuste; a
+  // taxa fica em pontos-base (100 bps = 1,00% ao mês) para não usar ponto
+  // flutuante. O saldo é recalculado a cada leitura, então o valor se
+  // atualiza sozinho a cada mês completado — sem tarefa agendada.
+  contractDate    DateTime
+  interestRateBps Int              @default(100)
+  interestMode    DebtInterestMode @default(COMPOUND)
+
+  expectedPayoffDate DateTime? // previsão de quitação (referência, não parcela)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payments DebtPayment[]
+}
+
+model DebtPayment {
+  id          String            @id @default(cuid())
+  debtId      String
+  number      Int // número sequencial do pagamento dentro da dívida
+  amountCents Int
+  paidAt      DateTime // data em que o pagamento foi feito
+  method      DebtPaymentMethod
+  note        String?
+  status      DebtPaymentStatus @default(PENDING)
+  statusNote  String? // motivo da contestação/cancelamento
+
+  registeredById String?
+  confirmedById  String?
+  confirmedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  debt         Debt         @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  registeredBy DebtUser?    @relation("DebtPaymentRegisteredBy", fields: [registeredById], references: [id])
+  confirmedBy  DebtUser?    @relation("DebtPaymentConfirmedBy", fields: [confirmedById], references: [id])
+  receipt      DebtReceipt?
+
+  @@unique([debtId, number])
+  @@index([debtId, paidAt])
+}
+
+/// Comprovante anexado ao pagamento. Guardado no próprio banco (Bytes) para
+/// a plataforma funcionar em qualquer hospedagem, sem bucket externo; o
+/// acesso passa sempre pela sessão (rota /comprovantes/[id]).
+model DebtReceipt {
+  id         String   @id @default(cuid())
+  paymentId  String   @unique
+  filename   String
+  mimeType   String
+  sizeBytes  Int
+  data       Bytes
+  uploadedAt DateTime @default(now())
+
+  payment DebtPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+/// Trilha de alterações: quem fez o quê e quando (inclui edições e exclusões).
+model DebtAuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String // ex.: payment.create, payment.update, payment.delete
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  actor DebtUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
