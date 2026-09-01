@@ -10,7 +10,7 @@ export type MailResult = { ok: boolean; dev: boolean };
 
 export async function sendMail(mail: Mail): Promise<MailResult> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.MAIL_FROM ?? "Controle de dívida <nao-responda@localhost>";
+  const from = process.env.MAIL_FROM || "Controle de dívida <nao-responda@localhost>";
 
   if (!apiKey) {
     console.info(

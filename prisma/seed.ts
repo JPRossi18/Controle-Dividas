@@ -19,8 +19,20 @@ import { randomBytes } from "crypto";
 
 const prisma = new PrismaClient();
 
-const DEBTOR_EMAIL = (process.env.DEBT_DEBTOR_EMAIL ?? "jp@divida.local").toLowerCase();
-const CREDITOR_EMAIL = (process.env.DEBT_CREDITOR_EMAIL ?? "bruno@divida.local").toLowerCase();
+/**
+ * Lê uma variável de ambiente tratando vazio como ausente.
+ *
+ * Importa porque hospedagens (a Vercel, por exemplo) criam as variáveis do
+ * .env.example com valor em branco: sem isto, o e-mail viraria "" e as duas
+ * contas colidiriam na chave única.
+ */
+function env(nome: string): string | undefined {
+  const valor = process.env[nome];
+  return valor && valor.trim() ? valor.trim() : undefined;
+}
+
+const DEBTOR_EMAIL = (env("DEBT_DEBTOR_EMAIL") ?? "jp@divida.local").toLowerCase();
+const CREDITOR_EMAIL = (env("DEBT_CREDITOR_EMAIL") ?? "bruno@divida.local").toLowerCase();
 
 function generatePassword() {
   return randomBytes(9).toString("base64url");
@@ -82,7 +94,7 @@ async function main() {
     email: DEBTOR_EMAIL,
     name: "JP",
     role: "DEBTOR",
-    password: process.env.DEBT_DEBTOR_PASSWORD,
+    password: env("DEBT_DEBTOR_PASSWORD"),
     permissions: {
       // JP registra pagamentos e enxerga tudo.
       canRegisterPayments: true,
@@ -97,7 +109,7 @@ async function main() {
     email: CREDITOR_EMAIL,
     name: "Bruno",
     role: "CREDITOR",
-    password: process.env.DEBT_CREDITOR_PASSWORD,
+    password: env("DEBT_CREDITOR_PASSWORD"),
     permissions: {
       // Bruno acompanha e confirma; não registra pagamentos por padrão.
       canRegisterPayments: false,
