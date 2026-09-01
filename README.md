@@ -124,17 +124,18 @@ Feito para Vercel (ou qualquer host com Node 20+):
 
 1. Crie um PostgreSQL gerenciado (Neon, Supabase, Railway…) e copie a string
    de conexão.
-2. Na Vercel, importe o repositório e configure as variáveis: `DATABASE_URL`,
-   `APP_URL`, `EXIGIR_LOGIN` (deixe vazio para site aberto, `1` para exigir
-   senha) e — para a recuperação de senha por e-mail funcionar —
-   `RESEND_API_KEY` e `MAIL_FROM`.
-3. Aplique as migrações e a configuração inicial apontando para o banco de
-   produção:
+2. Na Vercel, importe o repositório e configure `DATABASE_URL` com essa
+   string. Opcionais: `APP_URL`, `EXIGIR_LOGIN` (vazio = site aberto, `1` =
+   exige senha) e, para recuperação de senha por e-mail, `RESEND_API_KEY` e
+   `MAIL_FROM`.
+3. Clique em **Deploy**. Não há passo 4: o próprio build aplica as migrações
+   e cria a dívida e os perfis (`scripts/preparar-banco.mjs`). As duas
+   etapas são idempotentes — publicações seguintes não duplicam nada.
 
-   ```bash
-   DATABASE_URL="...produção..." npm run db:deploy
-   DATABASE_URL="...produção..." DEBT_DEBTOR_EMAIL=... DEBT_CREDITOR_EMAIL=... npm run db:seed
-   ```
+Se o provedor usar *pooler* e recusar migrações por ele (caso do Neon e do
+Supabase), configure também `DIRECT_DATABASE_URL` com a conexão direta (a
+mesma string, sem o `-pooler` no endereço): ela é usada só na preparação do
+banco. Para compilar sem tocar no banco, use `npm run build:sem-banco`.
 
 ## Testes
 
