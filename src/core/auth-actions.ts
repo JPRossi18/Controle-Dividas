@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { sendMail, appUrl } from "@/lib/mail";
-import { createDebtSession, destroyDebtSession } from "./session";
+import { createDebtSession, destroyDebtSession, setProfileCookie } from "./session";
 import { debtAudit } from "./audit";
 
 export type DebtFormState = { error?: string; ok?: boolean; devHint?: string };
@@ -119,4 +119,23 @@ export async function resetDebtPasswordAction(
   });
 
   redirect("/login?redefinida=1");
+}
+
+/**
+ * Troca o perfil em uso no modo aberto (sem senha — decisão do dono do
+ * site). Só aceita perfis existentes e ativos.
+ */
+export async function switchProfileAction(formData: FormData) {
+  const id = String(formData.get("userId") ?? "");
+  const user = await prisma.debtUser.findFirst({ where: { id, isActive: true } });
+  if (user) {
+    await setProfileCookie(user.id);
+    await debtAudit({
+      actorId: user.id,
+      action: "profile.switch",
+      entity: "DebtUser",
+      entityId: user.id,
+    });
+  }
+  redirect("/");
 }

@@ -10,6 +10,7 @@ import { createHash, randomBytes } from "crypto";
 import { cache } from "react";
 import type { DebtUser } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { PROFILE_COOKIE, requireLogin } from "./mode";
 
 const COOKIE = "divida_session";
 const TTL_DAYS = 7;
@@ -52,19 +53,7 @@ export type DebtSessionUser = Pick<
   | "canManageSettings"
 >;
 
-/** Usuário da sessão atual do módulo de dívida (ou null). Cacheado por request. */
-export const getDebtSessionUser = cache(async (): Promise<DebtSessionUser | null> => {
-  const token = cookies().get(COOKIE)?.value;
-  if (!token) return null;
-
-  const session = await prisma.debtSession.findUnique({
-    where: { id: hashToken(token) },
-    include: { user: true },
-  });
-  if (!session || session.expiresAt < new Date()) return null;
-  if (!session.user.isActive) return null;
-
-  const { user } = session;
+function toSessionUser(user: DebtUser): DebtSessionUser {
   return {
     id: user.id,
     name: user.name,
@@ -76,7 +65,68 @@ export const getDebtSessionUser = cache(async (): Promise<DebtSessionUser | null
     canDeletePayments: user.canDeletePayments,
     canManageSettings: user.canManageSettings,
   };
+}
+
+/**
+ * Perfil em uso no modo aberto: o que estiver escolhido no cookie ou, na
+ * falta dele, o devedor (quem registra os pagamentos).
+ */
+async function openModeUser(): Promise<DebtSessionUser | null> {
+  const chosen = cookies().get(PROFILE_COOKIE)?.value;
+  if (chosen) {
+    const user = await prisma.debtUser.findFirst({ where: { id: chosen, isActive: true } });
+    if (user) return toSessionUser(user);
+  }
+  // Sem escolha ainda: assume o devedor, que é quem registra pagamentos.
+  const user =
+    (await prisma.debtUser.findFirst({
+      where: { isActive: true, role: "DEBTOR" },
+      orderBy: { createdAt: "asc" },
+    })) ??
+    (await prisma.debtUser.findFirst({ where: { isActive: true }, orderBy: { createdAt: "asc" } }));
+  return user ? toSessionUser(user) : null;
+}
+
+/**
+ * Quem está usando o site agora. Com login exigido, vem da sessão em banco;
+ * no modo aberto (padrão), vem do perfil escolhido no topo da página.
+ * Cacheado por request.
+ */
+export const getDebtSessionUser = cache(async (): Promise<DebtSessionUser | null> => {
+  const token = cookies().get(COOKIE)?.value;
+
+  if (token) {
+    const session = await prisma.debtSession.findUnique({
+      where: { id: hashToken(token) },
+      include: { user: true },
+    });
+    if (session && session.expiresAt >= new Date() && session.user.isActive) {
+      return toSessionUser(session.user);
+    }
+  }
+
+  return requireLogin ? null : openModeUser();
 });
+
+/** Perfis disponíveis para escolher no modo aberto. */
+export async function listProfiles() {
+  return prisma.debtUser.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true, role: true },
+  });
+}
+
+/** Troca o perfil em uso (modo aberto). Sem senha, por decisão do dono. */
+export async function setProfileCookie(userId: string) {
+  cookies().set(PROFILE_COOKIE, userId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 365 * 86400,
+  });
+}
 
 export async function destroyDebtSession() {
   const token = cookies().get(COOKIE)?.value;

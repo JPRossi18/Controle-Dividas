@@ -34,6 +34,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   "debt.update": "Dados da dívida alterados",
   "user.update": "Usuário alterado",
   "user.password": "Senha alterada",
+  "profile.switch": "Trocou o perfil em uso",
   "auth.login": "Entrou na plataforma",
   "auth.logout": "Saiu da plataforma",
 };

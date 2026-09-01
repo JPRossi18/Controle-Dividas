@@ -54,6 +54,17 @@ duas partes precisam de acesso próprio, com papéis diferentes.
 10. **Sessão em banco, não JWT.** Permite revogar acesso na hora (troca de
     senha derruba as sessões abertas).
 
+11. **Site aberto por padrão, login opcional (01/09/2026).** O dono do site
+    decidiu, depois de avisado do risco, que não quer senha: quem tem o link
+    entra direto. Para não perder o que o próprio combinado exigia — saber
+    quem registrou e quem confirmou cada pagamento, e o histórico de
+    alterações —, o modo aberto mantém os dois perfis e os expõe num seletor
+    no topo ("Usando como"), sem senha. As permissões continuam valendo por
+    perfil: o devedor registra, o credor confirma. Nada do login foi
+    removido: `EXIGIR_LOGIN=1` reativa e-mail, senha, sessão e recuperação.
+    Consequência aceita: qualquer pessoa com o endereço vê, altera e exclui
+    pagamentos, e pode se passar por qualquer um dos dois perfis.
+
 ## Consequências
 
 - Alterar a data do contrato ou a taxa em Configurações reescreve todo o

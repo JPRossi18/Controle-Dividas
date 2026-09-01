@@ -20,8 +20,8 @@ import { join } from "node:path";
 import { writeFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 const BASE = process.env.BASE ?? "http://localhost:3000";
-const JP = { email: process.env.JP_EMAIL ?? "jp@divida.local", senha: process.env.JP_SENHA ?? "" };
-const BRUNO = { email: process.env.BRUNO_EMAIL ?? "bruno@divida.local", senha: process.env.BRUNO_SENHA ?? "" };
+const JP = { nome: "JP", email: process.env.JP_EMAIL ?? "jp@divida.local", senha: process.env.JP_SENHA ?? "" };
+const BRUNO = { nome: "Bruno", email: process.env.BRUNO_EMAIL ?? "bruno@divida.local", senha: process.env.BRUNO_SENHA ?? "" };
 const SP = mkdtempSync(join(tmpdir(), "divida-e2e-"));
 // PNG de 1x1 usado como comprovante de teste.
 writeFileSync(
@@ -38,14 +38,34 @@ function check(name, cond, extra = "") {
   console.log(`${cond ? "OK  " : "FALHA"} ${name}${extra ? " — " + extra : ""}`);
 }
 
-async function login(page, email, pass) {
-  await page.goto(`${BASE}/login`);
-  await page.fill("#email", email);
-  await page.fill("#password", pass);
-  await Promise.all([
-    page.waitForURL((u) => new URL(u).pathname === "/"),
-    page.getByRole("button", { name: "Entrar" }).click(),
-  ]);
+/**
+ * Entra no site como um dos dois perfis. Funciona nos dois modos: se o site
+ * exigir login, usa e-mail e senha; no modo aberto, apenas escolhe o perfil
+ * no seletor do topo.
+ */
+async function entrar(page, pessoa) {
+  await page.goto(`${BASE}/`);
+  const caminho = new URL(page.url()).pathname;
+
+  if (caminho === "/login") {
+    await page.fill("#email", pessoa.email);
+    await page.fill("#password", pessoa.senha);
+    await Promise.all([
+      page.waitForURL((u) => new URL(u).pathname === "/"),
+      page.getByRole("button", { name: "Entrar" }).click(),
+    ]);
+    return;
+  }
+
+  const seletor = page.locator("#userId");
+  const valor = await seletor
+    .locator("option", { hasText: pessoa.nome })
+    .first()
+    .getAttribute("value");
+  const atual = await seletor.inputValue();
+  if (valor && valor !== atual) {
+    await Promise.all([page.waitForLoadState("networkidle"), seletor.selectOption(valor)]);
+  }
 }
 
 (async () => {
@@ -54,7 +74,7 @@ async function login(page, email, pass) {
   const page = await ctx.newPage();
 
   // 1. login JP
-  await login(page, JP.email, JP.senha);
+  await entrar(page, JP);
   let body = await page.textContent("body");
   check("painel abre com valor original", body.includes("100.000,00"));
   check("painel mostra juros acumulados", /Juros acumulados/.test(body));
@@ -146,7 +166,7 @@ async function login(page, email, pass) {
   // 9. Bruno confirma
   const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const bruno = await ctx2.newPage();
-  await login(bruno, BRUNO.email, BRUNO.senha);
+  await entrar(bruno, BRUNO);
   await bruno.goto(paymentUrl);
   check(
     "Bruno não vê botão de registrar",
@@ -181,7 +201,7 @@ async function login(page, email, pass) {
   // 11. celular
   const mob = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const mp = await mob.newPage();
-  await login(mp, JP.email, JP.senha);
+  await entrar(mp, JP);
   await mp.screenshot({ path: `${SP}/08-celular-painel.png`, fullPage: true });
   await mp.goto(`${BASE}/pagamentos`);
   await mp.screenshot({ path: `${SP}/09-celular-pagamentos.png`, fullPage: true });

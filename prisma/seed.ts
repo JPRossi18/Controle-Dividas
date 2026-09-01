@@ -6,9 +6,10 @@
  * Nenhum pagamento é criado — o histórico começa vazio e só recebe o que
  * for realmente registrado na plataforma.
  *
- * E-mails e senhas vêm de variáveis de ambiente; sem elas, o script gera
- * uma senha forte e a imprime uma única vez, para ser trocada no primeiro
- * acesso (Configurações → Alterar minha senha).
+ * As duas contas existem para o site saber quem registrou e quem confirmou
+ * cada pagamento. No modo aberto (padrão) elas são apenas perfis, escolhidos
+ * no topo da página, sem senha. As senhas geradas aqui só passam a valer se
+ * o login for ligado (EXIGIR_LOGIN=1 na hospedagem).
  *
  * Executar: npm run db:seed  (pode rodar de novo com segurança)
  */
@@ -110,7 +111,11 @@ async function main() {
   console.info("\n── Controle de dívida configurado ─────────────────────");
   console.info(`Dívida: ${debt.debtorName} → ${debt.creditorName} · R$ 100.000,00`);
   console.info(`Contrato: 26/08/2022 · juros de 1% ao mês (compostos)`);
-  console.info(`Acesso em /login`);
+  console.info(
+    process.env.EXIGIR_LOGIN === "1"
+      ? "Login exigido: acesse /login com os dados abaixo."
+      : "Site aberto: entra sem senha e o perfil é escolhido no topo da página."
+  );
   for (const { user, password } of [jp, bruno]) {
     console.info(
       `  ${user.name}: ${user.email}` +
@@ -119,7 +124,7 @@ async function main() {
   }
   if (jp.password || bruno.password) {
     console.info(
-      "\nAnote as senhas acima: elas não voltam a ser exibidas. Troque no primeiro acesso."
+      "\nAnote as senhas acima: elas não voltam a ser exibidas. Só fazem falta se você ligar o login (EXIGIR_LOGIN=1)."
     );
   }
   console.info("──────────────────────────────────────────────────────\n");

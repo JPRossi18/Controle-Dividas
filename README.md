@@ -1,12 +1,17 @@
 # Controle de dívida
 
-Plataforma web privada para acompanhar o pagamento de uma dívida entre duas
+Plataforma web para acompanhar o pagamento de uma dívida entre duas
 pessoas — **JP (devedor)** e **Bruno (credor)**. Mostra pagamentos, saldo
 devedor atualizado com juros e o progresso da quitação, com confirmação do
 credor e histórico de todas as alterações.
 
-Site próprio, independente de qualquer outro sistema: banco de dados,
-acessos e domínio exclusivos.
+Site próprio, independente de qualquer outro sistema: banco de dados e
+domínio exclusivos.
+
+> **Atenção — o site é aberto por decisão do dono.** Não há senha: quem tiver
+> o link vê e altera os valores, e escolhe no topo da página se está usando
+> como devedor ou como credor. Para exigir e-mail e senha, defina
+> `EXIGIR_LOGIN=1` na hospedagem (ver [Acesso](#acesso)).
 
 ## O que faz
 
@@ -72,17 +77,28 @@ Configurações sem mexer no código. Padrão da configuração inicial:
 
 Sempre precisa sobrar ao menos uma conta com permissão de administrar.
 
-## Segurança
+## Acesso
 
-- Login por e-mail e senha (bcrypt, custo 12); sessão em banco, cookie
-  httpOnly de 7 dias, revogável.
-- Recuperação de senha por e-mail com token de uso único (30 minutos), que
-  derruba as sessões abertas ao ser usado.
-- Middleware bloqueia tudo sem cookie; o gate real é no servidor.
-- Comprovantes ficam no banco e só saem pela rota `/comprovantes/[id]`, com
-  sessão válida. Nada é público — o site inclusive pede aos buscadores que
-  não o indexem.
-- A mensagem de erro do login é sempre a mesma, exista ou não a conta.
+O site tem dois modos, escolhidos por variável de ambiente:
+
+**Aberto (padrão).** Sem senha. Quem abre o link entra direto e escolhe no
+topo se está usando como JP ou como Bruno — é o seletor "Usando como". A
+escolha não é autenticação: qualquer visitante pode trocar de perfil. Ela
+serve para o site continuar sabendo quem registrou e quem confirmou cada
+pagamento. Consequência a ter em mente: **qualquer pessoa com o endereço vê
+e altera tudo**, inclusive excluir pagamentos. O site pede aos buscadores
+que não o indexem, mas isso não protege nada — só reduz a chance de alguém
+tropeçar nele.
+
+**Com login (`EXIGIR_LOGIN=1`).** Volta a exigir e-mail e senha, com sessão
+em banco (cookie httpOnly de 7 dias, revogável), senhas em bcrypt (custo
+12), recuperação por e-mail com token de uso único de 30 minutos que derruba
+as sessões abertas, e mensagem de erro idêntica exista ou não a conta. Nada
+disso foi removido do código: as contas de JP e Bruno já existem com senha
+desde a configuração inicial, basta ligar a variável e publicar de novo.
+
+Em ambos os modos, os comprovantes são servidos pela rota
+`/comprovantes/[id]` a partir do banco, nunca por link público de arquivo.
 
 ## Rodando localmente
 
@@ -96,7 +112,7 @@ npm run dev                   # http://localhost:3000
 ```
 
 O seed cria **apenas** a dívida (R$ 100.000,00, contrato 26/08/2022, 1% ao
-mês) e as contas de JP e Bruno. Nenhum pagamento fictício é criado — o
+mês) e os perfis de JP e Bruno. Nenhum pagamento fictício é criado — o
 histórico começa vazio. Se `DEBT_DEBTOR_PASSWORD` / `DEBT_CREDITOR_PASSWORD`
 não estiverem definidas, ele gera senhas fortes e as imprime **uma única
 vez**. Rodar de novo é seguro: não sobrescreve senha existente nem duplica a
@@ -109,7 +125,8 @@ Feito para Vercel (ou qualquer host com Node 20+):
 1. Crie um PostgreSQL gerenciado (Neon, Supabase, Railway…) e copie a string
    de conexão.
 2. Na Vercel, importe o repositório e configure as variáveis: `DATABASE_URL`,
-   `APP_URL`, e — para o e-mail de recuperação de senha funcionar —
+   `APP_URL`, `EXIGIR_LOGIN` (deixe vazio para site aberto, `1` para exigir
+   senha) e — para a recuperação de senha por e-mail funcionar —
    `RESEND_API_KEY` e `MAIL_FROM`.
 3. Aplique as migrações e a configuração inicial apontando para o banco de
    produção:
@@ -131,7 +148,8 @@ confirmação, comprovante, recibo, extrato, CSV, celular e quitação):
 
 ```bash
 npm i -D playwright && npx playwright install chromium
-BASE=http://localhost:3000 JP_SENHA=... BRUNO_SENHA=... node scripts/verificacao-e2e.mjs
+# no modo aberto, as senhas nem são necessárias:
+BASE=http://localhost:3000 node scripts/verificacao-e2e.mjs
 ```
 
 ## Estrutura

@@ -3,6 +3,7 @@ import { can, getDebt, requireDebtUser } from "@/core/access";
 import { formatAmount, formatDateTimeBR, toDateInputValue } from "@/core/money";
 import { ROLE_LABELS, auditLabel } from "@/core/labels";
 import { updateUserPermissionsAction } from "@/core/settings-actions";
+import { requireLogin } from "@/core/mode";
 import { Alert, DCard, SectionTitle } from "@/components/ui";
 import { SubmitButton } from "@/components/actions-ui";
 import { DebtSettingsForm, PasswordForm } from "./forms";
@@ -41,6 +42,16 @@ export default async function SettingsPage({
         <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Ajustes</p>
         <h1 className="mt-1 text-2xl font-semibold text-slate-900">Configurações</h1>
       </header>
+
+      {!requireLogin && (
+        <Alert tone="warning">
+          <strong>Site aberto.</strong> Não há senha: qualquer pessoa com o link vê e altera
+          os valores, e pode escolher no topo se está usando como devedor ou como credor. Para
+          voltar a exigir e-mail e senha, defina a variável de ambiente{" "}
+          <code className="rounded bg-amber-100 px-1">EXIGIR_LOGIN=1</code> na hospedagem e
+          publique de novo — as contas e as senhas continuam cadastradas.
+        </Alert>
+      )}
 
       {searchParams.permissoes && <Alert tone="success">Permissões atualizadas.</Alert>}
       {searchParams.erro === "ultimo-admin" && (
@@ -127,10 +138,12 @@ export default async function SettingsPage({
         </div>
       </DCard>
 
-      <DCard>
-        <SectionTitle description="Vale para a sua conta.">Alterar minha senha</SectionTitle>
-        <PasswordForm />
-      </DCard>
+      {requireLogin && (
+        <DCard>
+          <SectionTitle description="Vale para a sua conta.">Alterar minha senha</SectionTitle>
+          <PasswordForm />
+        </DCard>
+      )}
 
       <DCard>
         <SectionTitle description="Últimas 50 ações registradas na plataforma.">
