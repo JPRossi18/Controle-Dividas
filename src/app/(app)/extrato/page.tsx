@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { loadDebtState, requireDebtUser } from "@/core/access";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/core/money";
-import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS } from "@/core/labels";
+import { PAYMENT_METHOD_LABELS } from "@/core/labels";
 import { DCard, DLinkButton, SectionTitle } from "@/components/ui";
 import { PrintButton } from "@/components/actions-ui";
 
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function StatementPage() {
   await requireDebtUser();
-  const { debt, payments, ledger, totals } = await loadDebtState();
+  const { debt, payments, ledger } = await loadDebtState();
 
   const rate = (debt.interestRateBps / 100).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
@@ -58,7 +58,6 @@ export default async function StatementPage() {
             ["Juros acumulados", formatBRL(ledger.interestChargedCents)],
             ["Total devido com juros", formatBRL(ledger.totalDueCents)],
             ["Total pago", formatBRL(ledger.paidCents)],
-            [`Confirmado por ${debt.creditorName}`, formatBRL(totals.confirmedCents)],
             ["Saldo devedor atualizado", formatBRL(ledger.balanceCents)],
             [
               "Percentual quitado",
@@ -93,7 +92,6 @@ export default async function StatementPage() {
                 <th className="py-2 font-medium">Data</th>
                 <th className="py-2 font-medium">Valor</th>
                 <th className="py-2 font-medium">Forma</th>
-                <th className="py-2 font-medium">Situação</th>
                 <th className="py-2 font-medium">Observação</th>
               </tr>
             </thead>
@@ -104,7 +102,6 @@ export default async function StatementPage() {
                   <td className="py-2 tabular-nums">{formatDateBR(p.paidAt)}</td>
                   <td className="py-2 font-medium tabular-nums">{formatBRL(p.amountCents)}</td>
                   <td className="py-2">{PAYMENT_METHOD_LABELS[p.method]}</td>
-                  <td className="py-2">{PAYMENT_STATUS_LABELS[p.status]}</td>
                   <td className="py-2 text-slate-600">{p.note ?? "—"}</td>
                 </tr>
               ))}

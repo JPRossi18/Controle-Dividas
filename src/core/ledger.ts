@@ -249,20 +249,3 @@ export function balanceAfterPayment(ledger: DebtLedger, paymentNumber: number): 
   }
   return null;
 }
-
-/** Totais por situação, para o painel separar informado × confirmado. */
-export function statusTotals(payments: LedgerPayment[]) {
-  const sum = (s: DebtPaymentStatus) =>
-    payments.filter((p) => p.status === s).reduce((a, p) => a + p.amountCents, 0);
-  const count = (s: DebtPaymentStatus) => payments.filter((p) => p.status === s).length;
-  return {
-    confirmedCents: sum("CONFIRMED"),
-    confirmedCount: count("CONFIRMED"),
-    pendingCents: sum("PENDING"),
-    pendingCount: count("PENDING"),
-    disputedCents: sum("DISPUTED"),
-    disputedCount: count("DISPUTED"),
-    canceledCents: sum("CANCELED"),
-    canceledCount: count("CANCELED"),
-  };
-}

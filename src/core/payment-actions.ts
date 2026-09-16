@@ -155,7 +155,6 @@ export async function createPaymentAction(
           method,
           note,
           registeredById: user.id,
-          status: "PENDING",
         },
       });
     });
@@ -214,12 +213,6 @@ export async function updatePaymentAction(
     };
   }
 
-  const financialChange =
-    current.amountCents !== amountCents || current.paidAt.getTime() !== paidAt.getTime();
-  // Alterar valor ou data de um pagamento já confirmado invalida a confirmação:
-  // o credor precisa confirmar de novo o que passou a valer.
-  const resetConfirmation = financialChange && current.status === "CONFIRMED";
-
   try {
     await prisma.debtPayment.update({
       where: { id },
@@ -228,9 +221,6 @@ export async function updatePaymentAction(
         paidAt,
         method,
         note,
-        ...(resetConfirmation
-          ? { status: "PENDING", confirmedAt: null, confirmedById: null }
-          : {}),
       },
     });
 
@@ -256,7 +246,6 @@ export async function updatePaymentAction(
           forma: method,
           observacao: note,
         },
-        confirmacaoRevogada: resetConfirmation,
       },
     });
   } catch (err) {
@@ -289,7 +278,6 @@ export async function deletePaymentAction(formData: FormData) {
       valorCentavos: payment.amountCents,
       data: payment.paidAt.toISOString(),
       forma: payment.method,
-      situacao: payment.status,
       observacao: payment.note,
       comprovante: payment.receipt?.filename ?? null,
     },
@@ -297,66 +285,6 @@ export async function deletePaymentAction(formData: FormData) {
 
   refresh();
   redirect("/pagamentos?excluido=1");
-}
-
-const statusActionSchema = z.object({
-  id: z.string().min(1),
-  status: z.enum(["CONFIRMED", "DISPUTED", "CANCELED", "PENDING"]),
-  statusNote: z.string().max(500).optional(),
-});
-
-/** Confirmar, contestar, cancelar ou reabrir um pagamento (ação do credor). */
-export async function setPaymentStatusAction(formData: FormData) {
-  const user = await requireDebtUserForAction("payment.confirm");
-  const debt = await getDebt();
-
-  const parsed = statusActionSchema.safeParse({
-    id: formData.get("id"),
-    status: formData.get("status"),
-    statusNote: String(formData.get("statusNote") ?? "").trim() || undefined,
-  });
-  if (!parsed.success) redirect("/pagamentos?erro=dados-invalidos");
-
-  const payment = await prisma.debtPayment.findFirst({
-    where: { id: parsed.data.id, debtId: debt.id },
-  });
-  if (!payment) redirect("/pagamentos?erro=nao-encontrado");
-
-  const { status, statusNote } = parsed.data;
-  const confirming = status === "CONFIRMED";
-
-  await prisma.debtPayment.update({
-    where: { id: payment.id },
-    data: {
-      status,
-      statusNote: status === "PENDING" ? null : statusNote ?? null,
-      confirmedAt: confirming ? new Date() : null,
-      confirmedById: confirming ? user.id : null,
-    },
-  });
-
-  const actionByStatus = {
-    CONFIRMED: "payment.confirm",
-    DISPUTED: "payment.dispute",
-    CANCELED: "payment.cancel",
-    PENDING: "payment.reopen",
-  } as const;
-
-  await debtAudit({
-    actorId: user.id,
-    action: actionByStatus[status],
-    entity: "DebtPayment",
-    entityId: payment.id,
-    metadata: {
-      numero: payment.number,
-      de: payment.status,
-      para: status,
-      justificativa: statusNote ?? null,
-    },
-  });
-
-  refresh();
-  redirect(`/pagamentos/${payment.id}?situacao=1`);
 }
 
 export async function deleteReceiptAction(formData: FormData) {

@@ -1,12 +1,9 @@
 import Link from "next/link";
 import { requireDebtUser } from "@/core/access";
 import { getDebt } from "@/core/access";
-import { debtLogoutAction, switchProfileAction } from "@/core/auth-actions";
-import { ROLE_LABELS } from "@/core/labels";
-import { listProfiles } from "@/core/session";
+import { debtLogoutAction } from "@/core/auth-actions";
 import { requireLogin } from "@/core/mode";
 import { NavLink } from "./nav-link";
-import { ProfileSwitch } from "./profile-switch";
 
 /**
  * Layout das telas autenticadas. O gate real é aqui (sessão validada no
@@ -15,8 +12,6 @@ import { ProfileSwitch } from "./profile-switch";
 export default async function DebtAppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireDebtUser();
   const debt = await getDebt();
-  // Modo aberto: em vez de sair da conta, troca-se de perfil no topo.
-  const profiles = requireLogin ? [] : await listProfiles();
 
   return (
     <div className="min-h-screen">
@@ -31,32 +26,19 @@ export default async function DebtAppLayout({ children }: { children: React.Reac
             </span>
           </Link>
 
-          <div className="flex items-center gap-3 text-sm">
-            {requireLogin ? (
-              <>
-                <span className="hidden text-slate-500 sm:inline">
-                  {user.name} · {ROLE_LABELS[user.role]}
-                </span>
-                <form action={debtLogoutAction}>
-                  <button
-                    type="submit"
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
-                  >
-                    Sair
-                  </button>
-                </form>
-              </>
-            ) : (
-              <ProfileSwitch
-                current={user.id}
-                profiles={profiles.map((p) => ({
-                  id: p.id,
-                  label: `${p.name} · ${ROLE_LABELS[p.role]}`,
-                }))}
-                action={switchProfileAction}
-              />
-            )}
-          </div>
+          {requireLogin && (
+            <div className="flex items-center gap-3 text-sm">
+              <span className="hidden text-slate-500 sm:inline">{user.name}</span>
+              <form action={debtLogoutAction}>
+                <button
+                  type="submit"
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+                >
+                  Sair
+                </button>
+              </form>
+            </div>
+          )}
         </div>
 
         <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-2 pb-2">

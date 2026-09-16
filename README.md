@@ -1,16 +1,14 @@
 # Controle de dívida
 
-Plataforma web para acompanhar o pagamento de uma dívida entre duas
-pessoas — **JP (devedor)** e **Bruno (credor)**. Mostra pagamentos, saldo
-devedor atualizado com juros e o progresso da quitação, com confirmação do
-credor e histórico de todas as alterações.
+Plataforma web para acompanhar o pagamento de uma dívida de **JP** com
+**Bruno**. JP lança os pagamentos; o site mostra o saldo devedor atualizado
+com juros, o progresso da quitação e o histórico de todas as alterações.
 
 Site próprio, independente de qualquer outro sistema: banco de dados e
 domínio exclusivos.
 
 > **Atenção — o site é aberto por decisão do dono.** Não há senha: quem tiver
-> o link vê e altera os valores, e escolhe no topo da página se está usando
-> como devedor ou como credor. Para exigir e-mail e senha, defina
+> o link vê e altera os valores. Para exigir e-mail e senha, defina
 > `EXIGIR_LOGIN=1` na hospedagem (ver [Acesso](#acesso)).
 
 ## O que faz
@@ -26,10 +24,6 @@ domínio exclusivos.
 - **Histórico** — do mais recente para o mais antigo, com número, data,
   valor, forma, observação, comprovante, data e hora do registro e ações de
   ver, editar e excluir (as duas últimas pedem confirmação e recalculam tudo).
-- **Confirmação do credor** — cada pagamento nasce *aguardando confirmação* e
-  pode virar *confirmado*, *contestado* ou *cancelado*, com data e hora da
-  confirmação. O painel mostra separadamente **total informado por JP** e
-  **total confirmado por Bruno**.
 - **Recibo e extrato** — recibo por pagamento e extrato completo, ambos
   imprimíveis em PDF pelo navegador; extrato também exportável em CSV.
 - **Configurações** — dados do contrato, permissões por usuário, troca de
@@ -55,47 +49,33 @@ próxima vez que a página abre.
 
 Todo valor é gravado em **centavos** (`Int`) e todo cálculo roda no servidor.
 
-### Situação dos pagamentos e totais
-
-- *Aguardando confirmação* e *confirmado* entram no total informado (base do
-  saldo principal).
-- *Contestado* continua somando, porém sinalizado na tela.
-- *Cancelado* não entra em nenhum total.
-
 ## Permissões
 
-Ficam em colunas do usuário, não em papéis fixos — dá para ajustar na tela de
-Configurações sem mexer no código. Padrão da configuração inicial:
+Quem opera o site é **JP**, o devedor: registra, edita e exclui pagamentos e
+altera os dados da dívida. **Bruno é o credor no documento, não usuário da
+plataforma** — não precisa entrar, confirmar nem validar nada; o nome dele
+aparece no painel, no extrato e nos recibos.
 
-| Permissão | JP (devedor) | Bruno (credor) |
-| --- | --- | --- |
-| Registrar pagamentos | sim | não |
-| Confirmar / contestar / cancelar | não | sim |
-| Editar pagamentos | sim | não |
-| Excluir pagamentos | sim | não |
-| Alterar dados da dívida e permissões | sim | não |
-
-Sempre precisa sobrar ao menos uma conta com permissão de administrar.
+As permissões ficam em colunas do usuário, não em papéis fixos, e podem ser
+ajustadas na tela de Configurações caso um dia isso mude. Sempre precisa
+sobrar ao menos uma conta com permissão de administrar.
 
 ## Acesso
 
 O site tem dois modos, escolhidos por variável de ambiente:
 
-**Aberto (padrão).** Sem senha. Quem abre o link entra direto e escolhe no
-topo se está usando como JP ou como Bruno — é o seletor "Usando como". A
-escolha não é autenticação: qualquer visitante pode trocar de perfil. Ela
-serve para o site continuar sabendo quem registrou e quem confirmou cada
-pagamento. Consequência a ter em mente: **qualquer pessoa com o endereço vê
-e altera tudo**, inclusive excluir pagamentos. O site pede aos buscadores
-que não o indexem, mas isso não protege nada — só reduz a chance de alguém
-tropeçar nele.
+**Aberto (padrão).** Sem senha: quem abre o link entra direto e já pode
+lançar pagamentos. Consequência a ter em mente: **qualquer pessoa com o
+endereço vê e altera tudo**, inclusive excluir pagamentos. O site pede aos
+buscadores que não o indexem, mas isso não protege nada — só reduz a chance
+de alguém tropeçar nele.
 
 **Com login (`EXIGIR_LOGIN=1`).** Volta a exigir e-mail e senha, com sessão
 em banco (cookie httpOnly de 7 dias, revogável), senhas em bcrypt (custo
 12), recuperação por e-mail com token de uso único de 30 minutos que derruba
 as sessões abertas, e mensagem de erro idêntica exista ou não a conta. Nada
-disso foi removido do código: as contas de JP e Bruno já existem com senha
-desde a configuração inicial, basta ligar a variável e publicar de novo.
+disso foi removido do código: a conta de JP já existe com senha desde a
+configuração inicial, basta ligar a variável e publicar de novo.
 
 Em ambos os modos, os comprovantes são servidos pela rota
 `/comprovantes/[id]` a partir do banco, nunca por link público de arquivo.
@@ -112,7 +92,7 @@ npm run dev                   # http://localhost:3000
 ```
 
 O seed cria **apenas** a dívida (R$ 100.000,00, contrato 26/08/2022, 1% ao
-mês) e os perfis de JP e Bruno. Nenhum pagamento fictício é criado — o
+mês) e a conta de JP. Nenhum pagamento fictício é criado — o
 histórico começa vazio. Se `DEBT_DEBTOR_PASSWORD` / `DEBT_CREDITOR_PASSWORD`
 não estiverem definidas, ele gera senhas fortes e as imprime **uma única
 vez**. Rodar de novo é seguro: não sobrescreve senha existente nem duplica a

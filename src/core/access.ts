@@ -9,11 +9,10 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { getDebtSessionUser, type DebtSessionUser } from "./session";
-import { computeLedger, statusTotals, type DebtLedger, type LedgerPayment } from "./ledger";
+import { computeLedger, type DebtLedger, type LedgerPayment } from "./ledger";
 
 export type DebtPermission =
   | "payment.register"
-  | "payment.confirm"
   | "payment.edit"
   | "payment.delete"
   | "settings.manage";
@@ -22,8 +21,6 @@ export function can(user: DebtSessionUser, permission: DebtPermission): boolean 
   switch (permission) {
     case "payment.register":
       return user.canRegisterPayments;
-    case "payment.confirm":
-      return user.canConfirmPayments;
     case "payment.edit":
       return user.canEditPayments;
     case "payment.delete":
@@ -83,11 +80,7 @@ async function loadPayments(debtId: string) {
 export type DebtState = {
   debt: Awaited<ReturnType<typeof getDebt>>;
   payments: PaymentWithPeople[];
-  /** Saldo oficial: considera tudo que não foi cancelado. */
   ledger: DebtLedger;
-  /** Segunda visão: só o que o credor confirmou. */
-  confirmedLedger: DebtLedger;
-  totals: ReturnType<typeof statusTotals>;
 };
 
 /**
@@ -108,22 +101,16 @@ export async function loadDebtState(asOf: Date = new Date()): Promise<DebtState>
       method: p.method,
     }));
 
-  const base = {
-    principalCents: debt.principalCents,
-    contractDate: debt.contractDate,
-    interestRateBps: debt.interestRateBps,
-    interestMode: debt.interestMode,
-    asOf,
-  };
-
   return {
     debt,
     payments,
-    ledger: computeLedger({ ...base, payments: toLedger(payments) }),
-    confirmedLedger: computeLedger({
-      ...base,
-      payments: toLedger(payments.filter((p) => p.status === "CONFIRMED")),
+    ledger: computeLedger({
+      principalCents: debt.principalCents,
+      contractDate: debt.contractDate,
+      interestRateBps: debt.interestRateBps,
+      interestMode: debt.interestMode,
+      payments: toLedger(payments),
+      asOf,
     }),
-    totals: statusTotals(toLedger(payments)),
   };
 }

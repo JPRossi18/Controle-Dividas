@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadDebtState, requireDebtUser } from "@/core/access";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/core/money";
-import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS } from "@/core/labels";
+import { PAYMENT_METHOD_LABELS } from "@/core/labels";
 import { PrintButton } from "@/components/actions-ui";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,6 @@ export default async function ReceiptPage({ params }: { params: { id: string } }
     ["Data do pagamento", formatDateBR(payment.paidAt)],
     ["Forma de pagamento", PAYMENT_METHOD_LABELS[payment.method]],
     ["Observação", payment.note || "—"],
-    ["Situação", PAYMENT_STATUS_LABELS[payment.status]],
     ...(toInterest !== null && toPrincipal !== null && debt.interestMode !== "NONE"
       ? ([
           ["Abatido de juros", formatBRL(toInterest)],
@@ -42,11 +41,6 @@ export default async function ReceiptPage({ params }: { params: { id: string } }
       : []),
     ["Saldo restante após o pagamento", balanceAfter === null ? "—" : formatBRL(balanceAfter)],
     ["Registrado na plataforma em", formatDateTimeBR(payment.createdAt)],
-    ...(payment.confirmedAt
-      ? ([["Confirmado pelo credor em", formatDateTimeBR(payment.confirmedAt)]] as Array<
-          [string, string]
-        >)
-      : []),
   ];
 
   return (

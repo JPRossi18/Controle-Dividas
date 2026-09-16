@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { can, loadDebtState, requireDebtUser } from "@/core/access";
 import { formatBRL, formatDateBR, toDateInputValue } from "@/core/money";
-import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS } from "@/core/labels";
+import { PAYMENT_METHOD_LABELS } from "@/core/labels";
 import { setExpectedPayoffAction } from "@/core/settings-actions";
 import {
   Alert,
@@ -12,7 +12,6 @@ import {
   ProgressBar,
   SectionTitle,
   StatCard,
-  StatusBadge,
 } from "@/components/ui";
 import { SubmitButton } from "@/components/actions-ui";
 
@@ -24,7 +23,7 @@ export default async function DebtDashboardPage({
   searchParams: { previsao?: string };
 }) {
   const user = await requireDebtUser();
-  const { debt, payments, ledger, confirmedLedger, totals } = await loadDebtState();
+  const { debt, payments, ledger } = await loadDebtState();
 
   const rate = (debt.interestRateBps / 100).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
@@ -73,8 +72,6 @@ export default async function DebtDashboardPage({
           <p className="text-xl font-semibold text-emerald-800">Pagamento integral concluído.</p>
           <p className="mt-1 text-sm text-emerald-700">
             Saldo devedor zerado em {ledger.lastPaymentAt ? formatDateBR(ledger.lastPaymentAt) : "—"}.
-            {!confirmedLedger.isSettled &&
-              " Ainda há pagamentos aguardando a confirmação do credor."}
           </p>
         </div>
       )}
@@ -113,16 +110,12 @@ export default async function DebtDashboardPage({
           </p>
         </div>
 
-        <ProgressBar percent={ledger.percentPaid} secondaryPercent={confirmedLedger.percentPaid} />
+        <ProgressBar percent={ledger.percentPaid} />
 
         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
-            Confirmado por {debt.creditorName}: {formatBRL(totals.confirmedCents)}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
-            Informado por {debt.debtorName}: {formatBRL(ledger.paidCents)}
+            Pago: {formatBRL(ledger.paidCents)} em {ledger.paymentCount} pagamento(s)
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
@@ -130,31 +123,6 @@ export default async function DebtDashboardPage({
           </span>
         </div>
       </DCard>
-
-      {/* ── Informado × confirmado ───────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          label={`Total informado por ${debt.debtorName}`}
-          value={formatBRL(ledger.paidCents)}
-          hint={`${ledger.paymentCount} pagamento(s) registrado(s)`}
-        />
-        <StatCard
-          label={`Total confirmado por ${debt.creditorName}`}
-          value={formatBRL(totals.confirmedCents)}
-          hint={`${totals.confirmedCount} pagamento(s) confirmado(s)`}
-          tone="green"
-        />
-        <StatCard
-          label="Aguardando confirmação"
-          value={formatBRL(totals.pendingCents)}
-          hint={
-            totals.disputedCount > 0
-              ? `${formatBRL(totals.disputedCents)} contestado(s)`
-              : `${totals.pendingCount} pagamento(s) pendente(s)`
-          }
-          tone={totals.disputedCount > 0 ? "red" : "amber"}
-        />
-      </div>
 
       {/* ── Resumo financeiro ────────────────────────────────── */}
       <DCard>
@@ -271,7 +239,15 @@ export default async function DebtDashboardPage({
                     {formatDateBR(p.paidAt)} · {PAYMENT_METHOD_LABELS[p.method]}
                   </p>
                 </div>
-                <StatusBadge status={p.status} label={PAYMENT_STATUS_LABELS[p.status]} />
+                {p.receipt && (
+                  <Link
+                    href={`/comprovantes/${p.id}`}
+                    target="_blank"
+                    className="text-sm text-blue-700 hover:underline"
+                  >
+                    Comprovante
+                  </Link>
+                )}
               </li>
             ))}
           </ul>

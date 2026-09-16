@@ -123,7 +123,6 @@ export async function setExpectedPayoffAction(formData: FormData) {
 
 const permissionFields = [
   "canRegisterPayments",
-  "canConfirmPayments",
   "canEditPayments",
   "canDeletePayments",
   "canManageSettings",

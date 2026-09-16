@@ -4,24 +4,9 @@ import { prisma } from "@/lib/db";
 import { can, loadDebtState, requireDebtUser } from "@/core/access";
 import { balanceAfterPayment } from "@/core/ledger";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/core/money";
-import {
-  PAYMENT_METHOD_LABELS,
-  PAYMENT_STATUS_LABELS,
-  auditLabel,
-} from "@/core/labels";
-import {
-  deletePaymentAction,
-  deleteReceiptAction,
-  setPaymentStatusAction,
-} from "@/core/payment-actions";
-import {
-  Alert,
-  DCard,
-  DInput,
-  DLinkButton,
-  SectionTitle,
-  StatusBadge,
-} from "@/components/ui";
+import { PAYMENT_METHOD_LABELS, auditLabel } from "@/core/labels";
+import { deletePaymentAction, deleteReceiptAction } from "@/core/payment-actions";
+import { Alert, DCard, DLinkButton, SectionTitle } from "@/components/ui";
 import { ConfirmSubmit } from "@/components/actions-ui";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +16,7 @@ export default async function PaymentDetailPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { registrado?: string; atualizado?: string; situacao?: string; comprovante?: string };
+  searchParams: { registrado?: string; atualizado?: string; comprovante?: string };
 }) {
   const user = await requireDebtUser();
   const { debt, payments, ledger } = await loadDebtState();
@@ -79,7 +64,6 @@ export default async function PaymentDetailPage({
       {searchParams.atualizado && (
         <Alert tone="success">Pagamento atualizado e totais recalculados.</Alert>
       )}
-      {searchParams.situacao && <Alert tone="success">Situação do pagamento atualizada.</Alert>}
       {searchParams.comprovante === "removido" && <Alert tone="success">Comprovante removido.</Alert>}
 
       <div className="grid gap-5 lg:grid-cols-[1.4fr,1fr]">
@@ -158,94 +142,6 @@ export default async function PaymentDetailPage({
         </DCard>
 
         <div className="space-y-5">
-          <DCard>
-            <SectionTitle description={`Confirmação de ${debt.creditorName}.`}>
-              Situação
-            </SectionTitle>
-
-            <div className="flex items-center gap-3">
-              <StatusBadge status={payment.status} label={PAYMENT_STATUS_LABELS[payment.status]} />
-              {payment.confirmedAt && (
-                <span className="text-sm text-slate-500">
-                  em {formatDateTimeBR(payment.confirmedAt)}
-                  {payment.confirmedBy ? ` por ${payment.confirmedBy.name}` : ""}
-                </span>
-              )}
-            </div>
-            {payment.statusNote && (
-              <p className="mt-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-                {payment.statusNote}
-              </p>
-            )}
-
-            {can(user, "payment.confirm") ? (
-              <form action={setPaymentStatusAction} className="mt-4 space-y-3">
-                <input type="hidden" name="id" value={payment.id} />
-                <div>
-                  <label htmlFor="statusNote" className="mb-1.5 block text-sm text-slate-600">
-                    Justificativa (para contestar ou cancelar)
-                  </label>
-                  <DInput
-                    id="statusNote"
-                    name="statusNote"
-                    maxLength={500}
-                    placeholder="Opcional"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {payment.status !== "CONFIRMED" && (
-                    <button
-                      type="submit"
-                      name="status"
-                      value="CONFIRMED"
-                      className="inline-flex h-10 items-center rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700"
-                    >
-                      Confirmar recebimento
-                    </button>
-                  )}
-                  {payment.status !== "DISPUTED" && (
-                    <button
-                      type="submit"
-                      name="status"
-                      value="DISPUTED"
-                      className="inline-flex h-10 items-center rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-medium text-red-700 hover:bg-red-100"
-                    >
-                      Contestar
-                    </button>
-                  )}
-                  {payment.status !== "CANCELED" && (
-                    <button
-                      type="submit"
-                      name="status"
-                      value="CANCELED"
-                      className="inline-flex h-10 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                    >
-                      Cancelar
-                    </button>
-                  )}
-                  {payment.status !== "PENDING" && (
-                    <button
-                      type="submit"
-                      name="status"
-                      value="PENDING"
-                      className="inline-flex h-10 items-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                    >
-                      Reabrir
-                    </button>
-                  )}
-                </div>
-                <p className="text-xs text-slate-400">
-                  Cancelado não entra em nenhum total. Contestado continua somando, porém
-                  sinalizado.
-                </p>
-              </form>
-            ) : (
-              <p className="mt-3 text-sm text-slate-500">
-                Somente {debt.creditorName} pode confirmar ou contestar este pagamento.
-              </p>
-            )}
-          </DCard>
-
           {can(user, "payment.delete") && (
             <DCard>
               <SectionTitle description="A exclusão fica registrada no histórico de alterações.">

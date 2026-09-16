@@ -153,7 +153,9 @@ describe("pagamentos", () => {
     expect(com.interestChargedCents).toBeLessThan(sem.interestChargedCents);
   });
 
-  it("pagamento cancelado não entra em nenhum total", () => {
+  // Situação só existe em dados antigos: o app não marca mais nada como
+  // cancelado, mas o cálculo continua respeitando o que já estiver gravado.
+  it("pagamento cancelado (dado antigo) não entra em nenhum total", () => {
     const l = computeLedger({
       ...base,
       payments: [payment(1, 10_000_00, "2022-09-27", "CANCELED")],
@@ -161,15 +163,6 @@ describe("pagamentos", () => {
     });
     expect(l.paidCents).toBe(0);
     expect(l.paymentCount).toBe(0);
-  });
-
-  it("pagamento contestado continua somando (fica sinalizado na tela)", () => {
-    const l = computeLedger({
-      ...base,
-      payments: [payment(1, 10_000_00, "2022-09-27", "DISPUTED")],
-      asOf: new Date(Date.UTC(2022, 8, 28, 12)),
-    });
-    expect(l.paidCents).toBe(10_000_00);
   });
 
   it("quita a dívida quando o saldo chega a zero", () => {

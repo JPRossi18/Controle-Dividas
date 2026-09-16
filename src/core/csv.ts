@@ -1,5 +1,5 @@
 import { formatAmount, formatDateBR, formatDateTimeBR } from "./money";
-import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS } from "./labels";
+import { PAYMENT_METHOD_LABELS } from "./labels";
 import type { DebtLedger } from "./ledger";
 import type { DebtState } from "./access";
 
@@ -18,7 +18,7 @@ function row(values: Array<string | number>): string {
  * a lista de pagamentos. Números em formato brasileiro (vírgula decimal).
  */
 export function buildStatementCsv(state: DebtState, ledger: DebtLedger): string {
-  const { debt, payments, totals } = state;
+  const { debt, payments } = state;
   const rate = (debt.interestRateBps / 100).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
   });
@@ -38,7 +38,6 @@ export function buildStatementCsv(state: DebtState, ledger: DebtLedger): string 
     row(["Juros acumulados (R$)", formatAmount(ledger.interestChargedCents)]),
     row(["Total devido com juros (R$)", formatAmount(ledger.totalDueCents)]),
     row(["Total pago (R$)", formatAmount(ledger.paidCents)]),
-    row(["Total confirmado pelo credor (R$)", formatAmount(totals.confirmedCents)]),
     row(["Saldo devedor atualizado (R$)", formatAmount(ledger.balanceCents)]),
     row(["Percentual quitado (%)", ledger.percentPaid.toLocaleString("pt-BR")]),
     row(["Quantidade de pagamentos", ledger.paymentCount]),
@@ -50,13 +49,10 @@ export function buildStatementCsv(state: DebtState, ledger: DebtLedger): string 
       "Data do pagamento",
       "Valor (R$)",
       "Forma de pagamento",
-      "Situação",
       "Observação",
       "Comprovante",
       "Registrado em",
       "Registrado por",
-      "Confirmado em",
-      "Confirmado por",
     ]),
   ];
 
@@ -68,13 +64,10 @@ export function buildStatementCsv(state: DebtState, ledger: DebtLedger): string 
         formatDateBR(p.paidAt),
         formatAmount(p.amountCents),
         PAYMENT_METHOD_LABELS[p.method],
-        PAYMENT_STATUS_LABELS[p.status],
         p.note ?? "",
         p.receipt ? p.receipt.filename : "",
         formatDateTimeBR(p.createdAt),
         p.registeredBy?.name ?? "",
-        p.confirmedAt ? formatDateTimeBR(p.confirmedAt) : "",
-        p.confirmedBy?.name ?? "",
       ])
     );
   }

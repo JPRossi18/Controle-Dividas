@@ -35,10 +35,14 @@ duas partes precisam de acesso próprio, com papéis diferentes.
    nunca soma valores; a validação do formulário é conveniência, a que vale é
    a do servidor.
 
-6. **Confirmação do credor separada do saldo.** O saldo principal considera o
-   que JP informou (menos cancelados); o confirmado por Bruno aparece em
-   paralelo, inclusive como segunda faixa da barra de progresso. Assim
-   nenhuma das partes precisa aceitar a leitura da outra para acompanhar.
+6. **Sem confirmação do credor (revisto em 16/09/2026).** A primeira versão
+   tinha situação por pagamento (aguardando/confirmado/contestado/cancelado)
+   e separava "informado por JP" de "confirmado por Bruno". O dono pediu algo
+   mais simples: ele lança, e pronto. Toda essa etapa saiu do app — um
+   pagamento registrado já vale. Bruno continua sendo o credor do documento
+   (painel, extrato e recibos), mas não é usuário da plataforma. As colunas
+   de situação seguem no banco por precaução com dados já gravados: o cálculo
+   ainda ignora um pagamento marcado como cancelado em versões anteriores.
 
 7. **Comprovantes no banco (`Bytes`), não em bucket.** O volume esperado é
    pequeno e a plataforma passa a funcionar em qualquer hospedagem sem
@@ -56,14 +60,11 @@ duas partes precisam de acesso próprio, com papéis diferentes.
 
 11. **Site aberto por padrão, login opcional (01/09/2026).** O dono do site
     decidiu, depois de avisado do risco, que não quer senha: quem tem o link
-    entra direto. Para não perder o que o próprio combinado exigia — saber
-    quem registrou e quem confirmou cada pagamento, e o histórico de
-    alterações —, o modo aberto mantém os dois perfis e os expõe num seletor
-    no topo ("Usando como"), sem senha. As permissões continuam valendo por
-    perfil: o devedor registra, o credor confirma. Nada do login foi
-    removido: `EXIGIR_LOGIN=1` reativa e-mail, senha, sessão e recuperação.
-    Consequência aceita: qualquer pessoa com o endereço vê, altera e exclui
-    pagamentos, e pode se passar por qualquer um dos dois perfis.
+    entra direto. Nada do login foi removido: `EXIGIR_LOGIN=1` reativa
+    e-mail, senha, sessão e recuperação. Consequência aceita: qualquer pessoa
+    com o endereço vê, altera e exclui pagamentos. Com a simplificação de
+    16/09/2026 (decisão 6), o site passou a ter um operador só — o seletor de
+    perfil do topo deixou de existir.
 
 ## Consequências
 

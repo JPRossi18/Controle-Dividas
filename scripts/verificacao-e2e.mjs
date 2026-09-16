@@ -1,15 +1,15 @@
 /**
  * Verificação ponta a ponta da plataforma, com navegador de verdade.
  *
- * Cobre o caminho completo: login, registro de pagamento com comprovante,
- * validações de valor, edição, recibo, extrato, CSV, confirmação pelo
- * credor, celular, quitação total e exclusão com recálculo.
+ * Cobre o caminho completo: registro de pagamento com comprovante,
+ * validações de valor, edição, recibo, extrato, CSV, celular, quitação
+ * total e exclusão com recálculo.
  *
  * Pré-requisitos: a plataforma rodando (npm run build && npm start), banco
  * migrado e populado com `npm run db:seed` usando as senhas de teste:
  *
  *   DEBT_DEBTOR_PASSWORD=... DEBT_CREDITOR_PASSWORD=... npm run db:seed
- *   BASE=http://localhost:3000 JP_SENHA=... BRUNO_SENHA=... \\
+ *   BASE=http://localhost:3000 JP_SENHA=... \\
  *     node scripts/verificacao-e2e.mjs
  *
  * O Playwright não é dependência do projeto: instale à parte para rodar
@@ -21,7 +21,6 @@ import { writeFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 const BASE = process.env.BASE ?? "http://localhost:3000";
 const JP = { nome: "JP", email: process.env.JP_EMAIL ?? "jp@divida.local", senha: process.env.JP_SENHA ?? "" };
-const BRUNO = { nome: "Bruno", email: process.env.BRUNO_EMAIL ?? "bruno@divida.local", senha: process.env.BRUNO_SENHA ?? "" };
 const SP = mkdtempSync(join(tmpdir(), "divida-e2e-"));
 // PNG de 1x1 usado como comprovante de teste.
 writeFileSync(
@@ -39,33 +38,19 @@ function check(name, cond, extra = "") {
 }
 
 /**
- * Entra no site como um dos dois perfis. Funciona nos dois modos: se o site
- * exigir login, usa e-mail e senha; no modo aberto, apenas escolhe o perfil
- * no seletor do topo.
+ * Abre o site. No modo aberto entra direto; com EXIGIR_LOGIN=1, preenche
+ * e-mail e senha.
  */
 async function entrar(page, pessoa) {
   await page.goto(`${BASE}/`);
-  const caminho = new URL(page.url()).pathname;
+  if (new URL(page.url()).pathname !== "/login") return;
 
-  if (caminho === "/login") {
-    await page.fill("#email", pessoa.email);
-    await page.fill("#password", pessoa.senha);
-    await Promise.all([
-      page.waitForURL((u) => new URL(u).pathname === "/"),
-      page.getByRole("button", { name: "Entrar" }).click(),
-    ]);
-    return;
-  }
-
-  const seletor = page.locator("#userId");
-  const valor = await seletor
-    .locator("option", { hasText: pessoa.nome })
-    .first()
-    .getAttribute("value");
-  const atual = await seletor.inputValue();
-  if (valor && valor !== atual) {
-    await Promise.all([page.waitForLoadState("networkidle"), seletor.selectOption(valor)]);
-  }
+  await page.fill("#email", pessoa.email);
+  await page.fill("#password", pessoa.senha);
+  await Promise.all([
+    page.waitForURL((u) => new URL(u).pathname === "/"),
+    page.getByRole("button", { name: "Entrar" }).click(),
+  ]);
 }
 
 (async () => {
@@ -98,7 +83,6 @@ async function entrar(page, pessoa) {
   check("pagamento registrado", body.includes("Pagamento registrado"));
   check("detalhe mostra valor", body.includes("10.000,00"));
   check("detalhe mostra comprovante", body.includes("comprovante.png"));
-  check("situacao inicial aguardando", body.includes("Aguardando confirmação"));
   const paymentUrl = page.url().split("?")[0];
   await page.screenshot({ path: `${SP}/02-pagamento.png`, fullPage: true });
 
@@ -110,7 +94,7 @@ async function entrar(page, pessoa) {
   await page.goto(`${BASE}/`);
   body = await page.textContent("body");
   check("total pago atualizado no painel", body.includes("10.000,00"));
-  check("informado x confirmado separados", body.includes("Total informado por JP") && body.includes("Total confirmado por Bruno"));
+  check("painel soma o pagamento no progresso", body.includes("Pago: R$"));
 
   // 4. validações do formulário (servidor)
   await page.goto(`${BASE}/pagamentos/novo`);
@@ -159,28 +143,7 @@ async function entrar(page, pessoa) {
   check("CSV exportado", csv.status() === 200 && csvText.includes("Extrato da dívida") && csvText.includes("12.500,00"));
   await page.screenshot({ path: `${SP}/05-extrato.png`, fullPage: true });
 
-  // 8. JP não pode confirmar
-  await page.goto(paymentUrl);
-  check("JP não confirma o próprio pagamento", (await page.textContent("body")).includes("Somente Bruno pode confirmar"));
-
-  // 9. Bruno confirma
-  const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-  const bruno = await ctx2.newPage();
-  await entrar(bruno, BRUNO);
-  await bruno.goto(paymentUrl);
-  check(
-    "Bruno não vê botão de registrar",
-    !(await bruno.textContent("body")).includes("Registrar pagamento")
-  );
-  await Promise.all([bruno.waitForURL(/situacao=1/), bruno.click("text=Confirmar recebimento")]);
-  body = await bruno.textContent("body");
-  check("pagamento confirmado por Bruno", body.includes("Confirmado") && body.includes("Bruno"));
-  check("data e hora da confirmação registradas", /em \d{2}\/\d{2}\/\d{4},? \d{2}:\d{2}/.test(body));
-  await bruno.goto(`${BASE}/`);
-  check("painel separa total confirmado", (await bruno.textContent("body")).includes("Total confirmado por Bruno"));
-  await bruno.screenshot({ path: `${SP}/06-painel-bruno.png`, fullPage: true });
-
-  // 10. quitação total
+  // 8. quitação total
   await page.goto(`${BASE}/`);
   const saldoTxt = (await page.textContent("body")).match(/Saldo devedor atualizado[\s\S]{0,60}?R\$\s([\d.,]+)/);
   const saldo = saldoTxt[1];
@@ -198,7 +161,7 @@ async function entrar(page, pessoa) {
   check("status muda para Quitada", body.includes("Quitada"));
   await page.screenshot({ path: `${SP}/07-quitada.png`, fullPage: true });
 
-  // 11. celular
+  // 9. celular
   const mob = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const mp = await mob.newPage();
   await entrar(mp, JP);
@@ -208,7 +171,7 @@ async function entrar(page, pessoa) {
   const overflow = await mp.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
   check("sem rolagem horizontal no celular", overflow);
 
-  // 12. excluir o pagamento de quitação e ver os totais voltarem
+  // 10. excluir o pagamento de quitação e ver os totais voltarem
   page.on("dialog", (d) => d.accept());
   await page.goto(quitacaoUrl);
   await Promise.all([page.waitForURL(/excluido=1/), page.click("text=Excluir pagamento")]);

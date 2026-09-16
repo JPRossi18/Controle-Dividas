@@ -12,7 +12,6 @@ export const dynamic = "force-dynamic";
 
 const PERMISSIONS = [
   ["canRegisterPayments", "Registrar pagamentos"],
-  ["canConfirmPayments", "Confirmar, contestar e cancelar"],
   ["canEditPayments", "Editar pagamentos"],
   ["canDeletePayments", "Excluir pagamentos"],
   ["canManageSettings", "Alterar dados da dívida e permissões"],

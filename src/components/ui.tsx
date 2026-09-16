@@ -150,18 +150,8 @@ export function StatCard({
   );
 }
 
-export function ProgressBar({
-  percent,
-  secondaryPercent,
-  className,
-}: {
-  percent: number;
-  secondaryPercent?: number;
-  className?: string;
-}) {
+export function ProgressBar({ percent, className }: { percent: number; className?: string }) {
   const clamped = Math.max(0, Math.min(percent, 100));
-  const secondary =
-    secondaryPercent === undefined ? undefined : Math.max(0, Math.min(secondaryPercent, 100));
 
   return (
     <div
@@ -172,38 +162,11 @@ export function ProgressBar({
       aria-valuemax={100}
       aria-label="Progresso da quitação"
     >
-      {/* Faixa clara: tudo que o devedor informou. Faixa forte: o que o credor confirmou. */}
       <div
-        className="absolute inset-y-0 left-0 rounded-full bg-emerald-300 transition-[width]"
+        className="absolute inset-y-0 left-0 rounded-full bg-emerald-600 transition-[width]"
         style={{ width: `${clamped}%` }}
       />
-      {secondary !== undefined && (
-        <div
-          className="absolute inset-y-0 left-0 rounded-full bg-emerald-600 transition-[width]"
-          style={{ width: `${secondary}%` }}
-        />
-      )}
     </div>
-  );
-}
-
-const statusStyles = {
-  PENDING: "bg-amber-50 text-amber-700 border-amber-200",
-  CONFIRMED: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  DISPUTED: "bg-red-50 text-red-700 border-red-200",
-  CANCELED: "bg-slate-100 text-slate-500 border-slate-200",
-} as const;
-
-export function StatusBadge({ status, label }: { status: keyof typeof statusStyles; label: string }) {
-  return (
-    <span
-      className={cx(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
-        statusStyles[status]
-      )}
-    >
-      {label}
-    </span>
   );
 }
 

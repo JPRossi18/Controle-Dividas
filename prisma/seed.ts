@@ -2,14 +2,16 @@
  * Configuração inicial do plataforma de controle de dívida.
  *
  * Cria APENAS o que foi combinado: a dívida de JP com Bruno (R$ 100.000,00,
- * contrato de 26/08/2022, juros de 1% ao mês) e as duas contas de acesso.
- * Nenhum pagamento é criado — o histórico começa vazio e só recebe o que
- * for realmente registrado na plataforma.
+ * contrato de 26/08/2022, juros de 1% ao mês) e a conta de quem opera o
+ * site (JP). Bruno é o credor no documento, mas não usa a plataforma —
+ * quem registra os pagamentos é o JP.
  *
- * As duas contas existem para o site saber quem registrou e quem confirmou
- * cada pagamento. No modo aberto (padrão) elas são apenas perfis, escolhidos
- * no topo da página, sem senha. As senhas geradas aqui só passam a valer se
- * o login for ligado (EXIGIR_LOGIN=1 na hospedagem).
+ * Nenhum pagamento é criado: o histórico começa vazio e só recebe o que for
+ * realmente registrado.
+ *
+ * A conta existe para o site registrar autoria dos lançamentos. No modo
+ * aberto (padrão) ninguém digita senha; a senha gerada aqui só passa a valer
+ * se o login for ligado (EXIGIR_LOGIN=1 na hospedagem).
  *
  * Executar: npm run db:seed  (pode rodar de novo com segurança)
  */
@@ -32,7 +34,6 @@ function env(nome: string): string | undefined {
 }
 
 const DEBTOR_EMAIL = (env("DEBT_DEBTOR_EMAIL") ?? "jp@divida.local").toLowerCase();
-const CREDITOR_EMAIL = (env("DEBT_CREDITOR_EMAIL") ?? "bruno@divida.local").toLowerCase();
 
 function generatePassword() {
   return randomBytes(9).toString("base64url");
@@ -45,7 +46,6 @@ async function upsertUser(input: {
   password?: string;
   permissions: {
     canRegisterPayments: boolean;
-    canConfirmPayments: boolean;
     canEditPayments: boolean;
     canDeletePayments: boolean;
     canManageSettings: boolean;
@@ -96,27 +96,10 @@ async function main() {
     role: "DEBTOR",
     password: env("DEBT_DEBTOR_PASSWORD"),
     permissions: {
-      // JP registra pagamentos e enxerga tudo.
       canRegisterPayments: true,
-      canConfirmPayments: false,
       canEditPayments: true,
       canDeletePayments: true,
       canManageSettings: true,
-    },
-  });
-
-  const bruno = await upsertUser({
-    email: CREDITOR_EMAIL,
-    name: "Bruno",
-    role: "CREDITOR",
-    password: env("DEBT_CREDITOR_PASSWORD"),
-    permissions: {
-      // Bruno acompanha e confirma; não registra pagamentos por padrão.
-      canRegisterPayments: false,
-      canConfirmPayments: true,
-      canEditPayments: false,
-      canDeletePayments: false,
-      canManageSettings: false,
     },
   });
 
@@ -126,17 +109,15 @@ async function main() {
   console.info(
     process.env.EXIGIR_LOGIN === "1"
       ? "Login exigido: acesse /login com os dados abaixo."
-      : "Site aberto: entra sem senha e o perfil é escolhido no topo da página."
+      : "Site aberto: entra sem senha."
   );
-  for (const { user, password } of [jp, bruno]) {
+  console.info(
+    `  ${jp.user.name}: ${jp.user.email}` +
+      (jp.password ? ` · senha inicial: ${jp.password}` : " · senha já definida (mantida)")
+  );
+  if (jp.password) {
     console.info(
-      `  ${user.name}: ${user.email}` +
-        (password ? ` · senha inicial: ${password}` : " · senha já definida (mantida)")
-    );
-  }
-  if (jp.password || bruno.password) {
-    console.info(
-      "\nAnote as senhas acima: elas não voltam a ser exibidas. Só fazem falta se você ligar o login (EXIGIR_LOGIN=1)."
+      "\nAnote a senha acima: ela não volta a ser exibida. Só faz falta se você ligar o login (EXIGIR_LOGIN=1)."
     );
   }
   console.info("──────────────────────────────────────────────────────\n");

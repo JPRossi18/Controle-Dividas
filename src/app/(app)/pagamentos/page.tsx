@@ -1,14 +1,9 @@
 import Link from "next/link";
 import { can, loadDebtState, requireDebtUser } from "@/core/access";
 import { formatBRL, formatDateBR, formatDateTimeBR } from "@/core/money";
-import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS } from "@/core/labels";
+import { PAYMENT_METHOD_LABELS } from "@/core/labels";
 import { deletePaymentAction } from "@/core/payment-actions";
-import {
-  Alert,
-  DCard,
-  DLinkButton,
-  StatusBadge,
-} from "@/components/ui";
+import { Alert, DCard, DLinkButton } from "@/components/ui";
 import { ConfirmSubmit } from "@/components/actions-ui";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +65,6 @@ export default async function PaymentsPage({
                   <th className="px-4 py-3 font-medium">Observação</th>
                   <th className="px-4 py-3 font-medium">Comprovante</th>
                   <th className="px-4 py-3 font-medium">Registrado em</th>
-                  <th className="px-4 py-3 font-medium">Situação</th>
                   <th className="px-4 py-3 text-right font-medium">Ações</th>
                 </tr>
               </thead>
@@ -106,9 +100,6 @@ export default async function PaymentsPage({
                     <td className="px-4 py-3 text-xs tabular-nums text-slate-500">
                       {formatDateTimeBR(p.createdAt)}
                       {p.registeredBy && <div>por {p.registeredBy.name}</div>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={p.status} label={PAYMENT_STATUS_LABELS[p.status]} />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2 whitespace-nowrap">
@@ -152,16 +143,13 @@ export default async function PaymentsPage({
           <div className="space-y-3 md:hidden">
             {payments.map((p) => (
               <DCard key={p.id}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-lg font-semibold tabular-nums text-slate-900">
-                      {formatBRL(p.amountCents)}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      #{p.number} · {formatDateBR(p.paidAt)} · {PAYMENT_METHOD_LABELS[p.method]}
-                    </p>
-                  </div>
-                  <StatusBadge status={p.status} label={PAYMENT_STATUS_LABELS[p.status]} />
+                <div>
+                  <p className="text-lg font-semibold tabular-nums text-slate-900">
+                    {formatBRL(p.amountCents)}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    #{p.number} · {formatDateBR(p.paidAt)} · {PAYMENT_METHOD_LABELS[p.method]}
+                  </p>
                 </div>
                 {p.note && <p className="mt-2 text-sm text-slate-600">{p.note}</p>}
                 <p className="mt-2 text-xs text-slate-400">
