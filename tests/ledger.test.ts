@@ -110,6 +110,8 @@ describe("juros de 1% ao mês sobre a dívida", () => {
     });
     expect(l.balanceCents).toBe(PRINCIPAL);
     expect(l.interestChargedCents).toBe(0);
+    // Sem juros, o extrato não ganha uma linha por mês.
+    expect(l.entries).toEqual([]);
   });
 
   it("o saldo anda sozinho: mais um mês, mais juros", () => {

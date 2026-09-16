@@ -62,9 +62,10 @@ async function entrar(page, pessoa) {
   await entrar(page, JP);
   let body = await page.textContent("body");
   check("painel abre com valor original", body.includes("100.000,00"));
-  check("painel mostra juros acumulados", /Juros acumulados/.test(body));
+  // Com juros desligados (padrão atual), nada de juros aparece na tela.
+  check("painel sem menção a juros", !/Juros acumulados/.test(body) && /sem juros/i.test(body));
   check("status inicial em pagamento", body.includes("Em pagamento"));
-  const saldoAntes = (await page.textContent("body")).match(/Saldo devedor atualizado[\s\S]{0,80}?R\$\s([\d.,]+)/);
+  const saldoAntes = (await page.textContent("body")).match(/Saldo restante[\s\S]{0,80}?R\$\s([\d.,]+)/);
   console.log("   saldo atual:", saldoAntes && saldoAntes[1]);
   await page.screenshot({ path: `${SP}/01-painel.png`, fullPage: true });
 
@@ -137,7 +138,11 @@ async function entrar(page, pessoa) {
   // 7. extrato + CSV
   await page.goto(`${BASE}/extrato`);
   body = await page.textContent("body");
-  check("extrato mostra evolução do saldo", body.includes("Evolução do saldo") && body.includes("Juros do mês"));
+  check(
+    "extrato mostra evolução do saldo",
+    body.includes("Evolução do saldo") && body.includes("Pagamento #1")
+  );
+  check("extrato sem linhas de juros zerados", !body.includes("Juros do mês"));
   const csv = await page.request.get(`${BASE}/extrato/csv`);
   const csvText = await csv.text();
   check("CSV exportado", csv.status() === 200 && csvText.includes("Extrato da dívida") && csvText.includes("12.500,00"));
@@ -145,7 +150,7 @@ async function entrar(page, pessoa) {
 
   // 8. quitação total
   await page.goto(`${BASE}/`);
-  const saldoTxt = (await page.textContent("body")).match(/Saldo devedor atualizado[\s\S]{0,60}?R\$\s([\d.,]+)/);
+  const saldoTxt = (await page.textContent("body")).match(/Saldo restante[\s\S]{0,60}?R\$\s([\d.,]+)/);
   const saldo = saldoTxt[1];
   await page.goto(`${BASE}/pagamentos/novo`);
   await page.fill("#amount", saldo);

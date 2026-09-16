@@ -1,8 +1,8 @@
 # Controle de dívida
 
 Plataforma web para acompanhar o pagamento de uma dívida de **JP** com
-**Bruno**. JP lança os pagamentos; o site mostra o saldo devedor atualizado
-com juros, o progresso da quitação e o histórico de todas as alterações.
+**Bruno**. JP lança os pagamentos; o site mostra o saldo restante, o
+progresso da quitação e o histórico de todas as alterações.
 
 Site próprio, independente de qualquer outro sistema: banco de dados e
 domínio exclusivos.
@@ -29,20 +29,26 @@ domínio exclusivos.
 - **Configurações** — dados do contrato, permissões por usuário, troca de
   senha e histórico de alterações.
 
-## Como o saldo se atualiza sozinho
+## Juros
 
-O contrato foi assinado em **26/08/2022** e prevê **1% de juros ao mês**.
-O saldo não é "valor original menos pagamentos": ele é recalculado do zero a
-cada leitura, percorrendo a linha do tempo do contrato até hoje
-(`src/core/ledger.ts`). É isso que faz o valor **andar sozinho mês a mês**,
-sem tarefa agendada: quando o dia 26 vira, o mês novo já entra na conta na
-próxima vez que a página abre.
+**Hoje a dívida está sem juros** (16/09/2026): a taxa real ainda será
+acertada entre as partes, então o saldo é simplesmente o valor da dívida
+menos os pagamentos. Nada de juros aparece nas telas enquanto estiver assim.
+
+O cálculo com juros continua pronto. Para ligar, basta ir em
+**Configurações → Dados da dívida**, escolher a forma de cálculo (compostos
+ou simples) e informar a taxa ao mês. A partir daí o saldo passa a ser
+recalculado do zero a cada leitura, percorrendo a linha do tempo desde a
+assinatura do contrato (26/08/2022) até hoje (`src/core/ledger.ts`) — é isso
+que faz o valor **andar sozinho mês a mês**, sem tarefa agendada: ao virar o
+dia 26, o mês novo já entra na conta na próxima vez que a página abre.
+
+Regras que valem quando os juros estão ligados:
 
 | Regra | Comportamento |
 | --- | --- |
 | Período de incidência | Apenas meses **inteiros** completados (sem pró-rata diário) |
-| Modo padrão | **Compostos**: juros sobre principal + juros acumulados |
-| Alternativas | **Simples** (só sobre o principal em aberto) ou **sem juros** — ajustável em Configurações |
+| Formas disponíveis | **Compostos** (sobre principal + juros acumulados) ou **simples** (só sobre o principal em aberto) |
 | Imputação do pagamento | Abate **primeiro os juros**, depois o principal (art. 354 do Código Civil) |
 | Empate de datas | Os juros do mês entram antes do pagamento feito no mesmo dia |
 | Arredondamento | Centavos inteiros, meio para cima; o resíduo permanece no saldo |
@@ -91,8 +97,8 @@ npm run db:seed               # cria a dívida e as duas contas
 npm run dev                   # http://localhost:3000
 ```
 
-O seed cria **apenas** a dívida (R$ 100.000,00, contrato 26/08/2022, 1% ao
-mês) e a conta de JP. Nenhum pagamento fictício é criado — o
+O seed cria **apenas** a dívida (R$ 100.000,00, contrato 26/08/2022, sem
+juros) e a conta de JP. Nenhum pagamento fictício é criado — o
 histórico começa vazio. Se `DEBT_DEBTOR_PASSWORD` / `DEBT_CREDITOR_PASSWORD`
 não estiverem definidas, ele gera senhas fortes e as imprime **uma única
 vez**. Rodar de novo é seguro: não sobrescreve senha existente nem duplica a

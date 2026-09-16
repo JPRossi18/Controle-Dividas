@@ -21,12 +21,16 @@ duas partes precisam de acesso próprio, com papéis diferentes.
    sozinho" ao virar o dia 26, e qualquer correção retroativa (data ou valor
    de um pagamento) refaz a história inteira, sem migração de dados.
 
-3. **Juros compostos como padrão, configurável.** "1% ao mês atualizando mês
-   a mês" foi implementado como capitalização mensal. Como a escolha entre
-   compostos e simples tem efeito jurídico e financeiro relevante, os três
-   modos (compostos, simples, sem juros) ficam disponíveis em Configurações e
-   a tela sempre diz qual está valendo. Só meses inteiros contam — nada de
-   pró-rata diário — para o número ser conferível na mão.
+3. **Juros configuráveis; desligados por ora (revisto em 16/09/2026).** A
+   primeira versão nasceu com 1% ao mês composto desde 26/08/2022. O dono
+   pediu para desligar: a taxa real ainda não está acertada, e é melhor
+   mostrar um número que ninguém contesta (valor menos pagamentos) do que um
+   número calculado sobre uma premissa incerta. Uma migração zerou a taxa da
+   dívida já cadastrada e os três modos (compostos, simples, sem juros)
+   seguem disponíveis em Configurações — a tela sempre diz qual está
+   valendo, e some qualquer menção a juros enquanto estiverem desligados.
+   Quando ligados, só meses inteiros contam — nada de pró-rata diário —
+   para o número ser conferível na mão.
 
 4. **Pagamento abate juros antes do principal** (art. 354 do Código Civil), e
    o recibo mostra a divisão.

@@ -180,17 +180,19 @@ export function computeLedger(input: LedgerInput): DebtLedger {
         : principalOutstanding + interestOutstanding;
     const interest = base > 0 ? roundCents(base * rate) : 0;
 
+    // Mês sem juros (taxa zerada ou saldo quitado) não vira linha: só
+    // poluiria o extrato com dezenas de "R$ 0,00".
     if (interest !== 0) {
       interestOutstanding += interest;
       interestCharged += interest;
+      entries.push({
+        kind: "interest",
+        date: accrual.date,
+        monthIndex: accrual.monthIndex,
+        interestCents: interest,
+        balanceAfterCents: principalOutstanding + interestOutstanding,
+      });
     }
-    entries.push({
-      kind: "interest",
-      date: accrual.date,
-      monthIndex: accrual.monthIndex,
-      interestCents: interest,
-      balanceAfterCents: principalOutstanding + interestOutstanding,
-    });
 
     applyPaymentsUntil(accrual.date.getTime());
   }

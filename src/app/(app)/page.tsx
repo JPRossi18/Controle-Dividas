@@ -28,6 +28,8 @@ export default async function DebtDashboardPage({
   const rate = (debt.interestRateBps / 100).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
   });
+  // Com juros desligados, tudo o que fala deles some da tela.
+  const comJuros = debt.interestMode !== "NONE";
   const recent = payments.slice(0, 5);
 
   return (
@@ -77,21 +79,25 @@ export default async function DebtDashboardPage({
       )}
 
       {/* ── Números principais ───────────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Valor original" value={formatBRL(debt.principalCents)} />
-        <StatCard
-          label="Juros acumulados"
-          value={formatBRL(ledger.interestChargedCents)}
-          hint={`${ledger.monthsElapsed} ${
-            ledger.monthsElapsed === 1 ? "mês" : "meses"
-          } desde o contrato`}
-          tone="amber"
-        />
+      <div
+        className={`grid gap-4 sm:grid-cols-2 ${comJuros ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}
+      >
+        <StatCard label="Valor da dívida" value={formatBRL(debt.principalCents)} />
+        {comJuros && (
+          <StatCard
+            label="Juros acumulados"
+            value={formatBRL(ledger.interestChargedCents)}
+            hint={`${ledger.monthsElapsed} ${
+              ledger.monthsElapsed === 1 ? "mês" : "meses"
+            } desde o contrato`}
+            tone="amber"
+          />
+        )}
         <StatCard label="Total já pago" value={formatBRL(ledger.paidCents)} tone="green" />
         <StatCard
-          label="Saldo devedor atualizado"
+          label={comJuros ? "Saldo devedor atualizado" : "Saldo restante"}
           value={formatBRL(ledger.balanceCents)}
-          hint={`Total devido: ${formatBRL(ledger.totalDueCents)}`}
+          hint={comJuros ? `Total devido: ${formatBRL(ledger.totalDueCents)}` : undefined}
           tone={ledger.isSettled ? "green" : "blue"}
         />
       </div>
@@ -102,7 +108,9 @@ export default async function DebtDashboardPage({
           <div>
             <p className="text-sm font-medium text-slate-700">Progresso da quitação</p>
             <p className="text-sm text-slate-500">
-              Percentual calculado sobre o total devido com juros até hoje.
+              {comJuros
+                ? "Percentual calculado sobre o total devido com juros até hoje."
+                : "Percentual calculado sobre o valor da dívida."}
             </p>
           </div>
           <p className="text-2xl font-semibold tabular-nums text-emerald-600">
@@ -132,16 +140,18 @@ export default async function DebtDashboardPage({
 
         <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
           {[
-            ["Valor original", formatBRL(debt.principalCents)],
-            [
-              debt.interestMode === "NONE"
-                ? "Juros"
-                : `Juros (${rate}% ao mês, ${
-                    debt.interestMode === "COMPOUND" ? "compostos" : "simples"
-                  })`,
-              formatBRL(ledger.interestChargedCents),
-            ],
-            ["Total devido com juros", formatBRL(ledger.totalDueCents)],
+            ["Valor da dívida", formatBRL(debt.principalCents)],
+            ...(comJuros
+              ? ([
+                  [
+                    `Juros (${rate}% ao mês, ${
+                      debt.interestMode === "COMPOUND" ? "compostos" : "simples"
+                    })`,
+                    formatBRL(ledger.interestChargedCents),
+                  ],
+                  ["Total devido com juros", formatBRL(ledger.totalDueCents)],
+                ] as Array<[string, string]>)
+              : []),
             ["Total pago", formatBRL(ledger.paidCents)],
             ["Saldo atual", formatBRL(ledger.balanceCents)],
             [
@@ -154,12 +164,16 @@ export default async function DebtDashboardPage({
             ],
             ["Quantidade de pagamentos", String(ledger.paymentCount)],
             ["Média dos pagamentos", formatBRL(ledger.averageCents)],
-            [
-              "Próxima incidência de juros",
-              debt.interestMode === "NONE"
-                ? "—"
-                : `${formatDateBR(ledger.nextAccrualDate)} · ${formatBRL(ledger.nextAccrualCents)}`,
-            ],
+            ...(comJuros
+              ? ([
+                  [
+                    "Próxima incidência de juros",
+                    `${formatDateBR(ledger.nextAccrualDate)} · ${formatBRL(
+                      ledger.nextAccrualCents
+                    )}`,
+                  ],
+                ] as Array<[string, string]>)
+              : []),
           ].map(([label, value]) => (
             <div key={label} className="flex justify-between gap-4 border-b border-slate-100 pb-2">
               <dt className="text-sm text-slate-500">{label}</dt>

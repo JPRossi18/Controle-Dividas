@@ -23,6 +23,8 @@ export function buildStatementCsv(state: DebtState, ledger: DebtLedger): string 
     minimumFractionDigits: 2,
   });
 
+  const comJuros = debt.interestMode !== "NONE";
+
   const lines: string[] = [
     row(["Extrato da dívida"]),
     row(["Devedor", debt.debtorName]),
@@ -30,15 +32,19 @@ export function buildStatementCsv(state: DebtState, ledger: DebtLedger): string 
     row(["Contrato assinado em", formatDateBR(debt.contractDate)]),
     row([
       "Juros",
-      debt.interestMode === "NONE"
-        ? "sem juros"
-        : `${rate}% ao mês (${debt.interestMode === "COMPOUND" ? "compostos" : "simples"})`,
+      comJuros
+        ? `${rate}% ao mês (${debt.interestMode === "COMPOUND" ? "compostos" : "simples"})`
+        : "sem juros",
     ]),
-    row(["Valor original (R$)", formatAmount(debt.principalCents)]),
-    row(["Juros acumulados (R$)", formatAmount(ledger.interestChargedCents)]),
-    row(["Total devido com juros (R$)", formatAmount(ledger.totalDueCents)]),
+    row(["Valor da dívida (R$)", formatAmount(debt.principalCents)]),
+    ...(comJuros
+      ? [
+          row(["Juros acumulados (R$)", formatAmount(ledger.interestChargedCents)]),
+          row(["Total devido com juros (R$)", formatAmount(ledger.totalDueCents)]),
+        ]
+      : []),
     row(["Total pago (R$)", formatAmount(ledger.paidCents)]),
-    row(["Saldo devedor atualizado (R$)", formatAmount(ledger.balanceCents)]),
+    row([comJuros ? "Saldo devedor atualizado (R$)" : "Saldo restante (R$)", formatAmount(ledger.balanceCents)]),
     row(["Percentual quitado (%)", ledger.percentPaid.toLocaleString("pt-BR")]),
     row(["Quantidade de pagamentos", ledger.paymentCount]),
     row(["Média dos pagamentos (R$)", formatAmount(ledger.averageCents)]),

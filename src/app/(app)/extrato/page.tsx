@@ -19,6 +19,7 @@ export default async function StatementPage() {
   const rate = (debt.interestRateBps / 100).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
   });
+  const comJuros = debt.interestMode !== "NONE";
   // Linha do tempo do mais recente para o mais antigo.
   const timeline = [...ledger.entries].reverse();
 
@@ -48,17 +49,21 @@ export default async function StatementPage() {
             ["Contrato assinado em", formatDateBR(debt.contractDate)],
             [
               "Juros",
-              debt.interestMode === "NONE"
-                ? "Sem juros"
-                : `${rate}% ao mês (${
+              comJuros
+                ? `${rate}% ao mês (${
                     debt.interestMode === "COMPOUND" ? "compostos" : "simples"
-                  })`,
+                  })`
+                : "Sem juros",
             ],
-            ["Valor original", formatBRL(debt.principalCents)],
-            ["Juros acumulados", formatBRL(ledger.interestChargedCents)],
-            ["Total devido com juros", formatBRL(ledger.totalDueCents)],
+            ["Valor da dívida", formatBRL(debt.principalCents)],
+            ...(comJuros
+              ? ([
+                  ["Juros acumulados", formatBRL(ledger.interestChargedCents)],
+                  ["Total devido com juros", formatBRL(ledger.totalDueCents)],
+                ] as Array<[string, string]>)
+              : []),
             ["Total pago", formatBRL(ledger.paidCents)],
-            ["Saldo devedor atualizado", formatBRL(ledger.balanceCents)],
+            [comJuros ? "Saldo devedor atualizado" : "Saldo restante", formatBRL(ledger.balanceCents)],
             [
               "Percentual quitado",
               `${ledger.percentPaid.toLocaleString("pt-BR", { minimumFractionDigits: 1 })}%`,
@@ -68,7 +73,9 @@ export default async function StatementPage() {
               "Previsão de quitação",
               debt.expectedPayoffDate ? formatDateBR(debt.expectedPayoffDate) : "Não informada",
             ],
-            ["Meses decorridos", String(ledger.monthsElapsed)],
+            ...(comJuros
+              ? ([["Meses decorridos", String(ledger.monthsElapsed)]] as Array<[string, string]>)
+              : []),
           ].map(([label, value]) => (
             <div key={label} className="flex justify-between gap-4 border-b border-slate-100 pb-1.5">
               <dt className="text-sm text-slate-500">{label}</dt>
@@ -111,7 +118,13 @@ export default async function StatementPage() {
       </DCard>
 
       <DCard className="overflow-x-auto">
-        <SectionTitle description="Cada incidência mensal de juros e cada pagamento, com o saldo resultante.">
+        <SectionTitle
+          description={
+            comJuros
+              ? "Cada incidência mensal de juros e cada pagamento, com o saldo resultante."
+              : "Cada pagamento, com o saldo resultante."
+          }
+        >
           Evolução do saldo
         </SectionTitle>
         {timeline.length === 0 ? (

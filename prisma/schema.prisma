@@ -97,13 +97,17 @@ model Debt {
   currency       String   @default("BRL")
   description    String?
 
-  // Juros: a data do contrato define o "dia de aniversário" do reajuste; a
-  // taxa fica em pontos-base (100 bps = 1,00% ao mês) para não usar ponto
-  // flutuante. O saldo é recalculado a cada leitura, então o valor se
-  // atualiza sozinho a cada mês completado — sem tarefa agendada.
+  // Juros: começam DESLIGADOS (16/09/2026 — a taxa real ainda será
+  // acertada entre as partes). Para ligar, basta escolher a forma de
+  // cálculo e a taxa em Configurações.
+  //
+  // Quando ligados: a data do contrato define o "dia de aniversário" do
+  // reajuste e a taxa fica em pontos-base (100 bps = 1,00% ao mês), para
+  // não usar ponto flutuante. O saldo é recalculado a cada leitura, então
+  // o valor se atualiza sozinho a cada mês completado, sem tarefa agendada.
   contractDate    DateTime
-  interestRateBps Int              @default(100)
-  interestMode    DebtInterestMode @default(COMPOUND)
+  interestRateBps Int              @default(0)
+  interestMode    DebtInterestMode @default(NONE)
 
   expectedPayoffDate DateTime? // previsão de quitação (referência, não parcela)
 

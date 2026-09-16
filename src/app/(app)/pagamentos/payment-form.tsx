@@ -61,7 +61,7 @@ export function PaymentForm({
             aria-describedby="amount-help"
           />
           <p id="amount-help" className="mt-1 text-xs text-slate-500">
-            Saldo devedor atualizado: {balanceLabel}
+            Saldo restante: {balanceLabel}
           </p>
         </div>
 

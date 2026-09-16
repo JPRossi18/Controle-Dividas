@@ -2,8 +2,8 @@
  * Configuração inicial do plataforma de controle de dívida.
  *
  * Cria APENAS o que foi combinado: a dívida de JP com Bruno (R$ 100.000,00,
- * contrato de 26/08/2022, juros de 1% ao mês) e a conta de quem opera o
- * site (JP). Bruno é o credor no documento, mas não usa a plataforma —
+ * contrato de 26/08/2022, sem juros por enquanto) e a conta de quem opera
+ * o site (JP). Bruno é o credor no documento, mas não usa a plataforma —
  * quem registra os pagamentos é o JP.
  *
  * Nenhum pagamento é criado: o histórico começa vazio e só recebe o que for
@@ -83,10 +83,12 @@ async function main() {
         creditorName: "Bruno",
         principalCents: 100_000_00, // R$ 100.000,00
         currency: "BRL",
-        // Contrato assinado em 26/08/2022 — define o dia do reajuste mensal.
+        // Contrato assinado em 26/08/2022. A data fica registrada e passa a
+        // valer como dia do reajuste se os juros forem ligados depois.
         contractDate: new Date(Date.UTC(2022, 7, 26, 12, 0, 0)),
-        interestRateBps: 100, // 1,00% ao mês
-        interestMode: "COMPOUND",
+        // Sem juros por enquanto: a taxa ainda será acertada entre as partes.
+        interestRateBps: 0,
+        interestMode: "NONE",
       },
     }));
 
@@ -105,7 +107,7 @@ async function main() {
 
   console.info("\n── Controle de dívida configurado ─────────────────────");
   console.info(`Dívida: ${debt.debtorName} → ${debt.creditorName} · R$ 100.000,00`);
-  console.info(`Contrato: 26/08/2022 · juros de 1% ao mês (compostos)`);
+  console.info(`Contrato: 26/08/2022 · sem juros (ajustável em Configurações)`);
   console.info(
     process.env.EXIGIR_LOGIN === "1"
       ? "Login exigido: acesse /login com os dados abaixo."
